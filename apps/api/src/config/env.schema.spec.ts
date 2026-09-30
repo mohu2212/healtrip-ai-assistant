@@ -29,6 +29,7 @@ describe('loadEnv', () => {
         timeoutMs: 60_000,
         maxRetries: 2,
         maxTokens: 16_000,
+        dailyTokenBudget: 0,
         anthropic: { model: 'claude-opus-5-5' },
       },
     });

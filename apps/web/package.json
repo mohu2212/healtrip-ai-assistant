@@ -34,5 +34,8 @@
     "typescript": "^5",
     "vitest": "^4.1.11"
   },
-  "description": "HealTrip assistant chat UI (EN/AR)"
+  "description": "HealTrip assistant chat UI (EN/AR)",
+  "engines": {
+    "node": "22.x"
+  }
 }

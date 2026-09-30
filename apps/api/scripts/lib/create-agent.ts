@@ -6,6 +6,7 @@ import { CatalogService } from '../../src/catalog/catalog.service.js';
 import { SystemClock } from '../../src/common/clock.js';
 import { loadEnv } from '../../src/config/env.schema.js';
 import { PrismaService } from '../../src/database/prisma.service.js';
+import { LlmUsageRepository } from '../../src/llm/budget/llm-usage.repository.js';
 import { createLlmProvider } from '../../src/llm/llm.module.js';
 import { createToolRegistry } from '../../src/tools/tools.module.js';
 
@@ -21,7 +22,7 @@ export function createAgentForScripts() {
   const clock = new SystemClock();
   const prisma = new PrismaService(config);
   const catalog = new CatalogService(new CatalogRepository(prisma), clock);
-  const llm = createLlmProvider(config);
+  const llm = createLlmProvider(config, { usage: new LlmUsageRepository(prisma), clock });
   const agent = new AgentService(llm, createToolRegistry(catalog), clock, config);
 
   return { agent, catalog, config, provider: llm.name, close: () => prisma.$disconnect() };

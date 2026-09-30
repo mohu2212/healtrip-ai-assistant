@@ -55,7 +55,7 @@ and which fails safely.
 13. [Assumptions, limitations & future work](#assumptions-limitations--future-work)
 14. [Configuration](#configuration)
 
-Deep dives: [docs/agent.md](docs/agent.md) · [docs/decisions.md](docs/decisions.md) · [docs/database.md](docs/database.md)
+Deep dives: [docs/agent.md](docs/agent.md) · [docs/decisions.md](docs/decisions.md) · [docs/database.md](docs/database.md) · [docs/deployment.md](docs/deployment.md)
 
 ---
 
@@ -349,17 +349,17 @@ ERD and design notes: **[docs/database.md](docs/database.md)**.
 
 ## Security
 
-| Area             | Measure                                                                                                                                                                                                             |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Input validation | Every body, query and path param is parsed by the shared zod schemas (strict: unknown keys rejected); message length 1–2000; JSON body ≤ 16 kB                                                                      |
-| Data access      | Read-only tools, whitelisted filters, parameterized queries only; typed ID prefixes                                                                                                                                 |
-| Prompt injection | Patient text and tool results are treated as data by the prompt; more importantly, **nothing depends on the model obeying**: grounding, triage binding and DB-built cards hold even if the model is fooled (tested) |
-| Abuse & cost     | Per-IP rate limit (60/min) plus a stricter chat limit (10/min), 30 messages per conversation, bounded agent loop (6 LLM calls / 90 s)                                                                               |
-| HTTP             | helmet headers, CORS allowlist, `x-powered-by` off; web app sets `X-Frame-Options`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`                                                                              |
-| Secrets          | Environment validated at boot (fails fast, never prints values); API keys only on the server                                                                                                                        |
-| Privacy          | Logs never contain request bodies or patient text (IDs, codes, counts, timings only); credential headers redacted; the audit log stores tool inputs/summaries, not the answer text                                  |
-| Output           | Model text is rendered as plain text (no HTML), so injected markup can't run                                                                                                                                        |
-| Sessions         | Anonymous conversations addressed by unguessable UUIDs (no accounts in this prototype)                                                                                                                              |
+| Area             | Measure                                                                                                                                                                                                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Input validation | Every body, query and path param is parsed by the shared zod schemas (strict: unknown keys rejected); message length 1–2000; JSON body ≤ 16 kB                                                                                             |
+| Data access      | Read-only tools, whitelisted filters, parameterized queries only; typed ID prefixes                                                                                                                                                        |
+| Prompt injection | Patient text and tool results are treated as data by the prompt; more importantly, **nothing depends on the model obeying**: grounding, triage binding and DB-built cards hold even if the model is fooled (tested)                        |
+| Abuse & cost     | Per-IP rate limit (60/min) plus a stricter chat limit (10/min), 30 messages per conversation, bounded agent loop (6 LLM calls / 90 s), and a **daily token budget** for the paid model — past it the demo brain answers until midnight UTC |
+| HTTP             | helmet headers, CORS allowlist, `x-powered-by` off; web app sets `X-Frame-Options`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`                                                                                                     |
+| Secrets          | Environment validated at boot (fails fast, never prints values); API keys only on the server                                                                                                                                               |
+| Privacy          | Logs never contain request bodies or patient text (IDs, codes, counts, timings only); credential headers redacted; the audit log stores tool inputs/summaries, not the answer text                                                         |
+| Output           | Model text is rendered as plain text (no HTML), so injected markup can't run                                                                                                                                                               |
+| Sessions         | Anonymous conversations addressed by unguessable UUIDs (no accounts in this prototype)                                                                                                                                                     |
 
 Deliberately out of scope for a prototype: user authentication, a Content-Security-Policy, and encryption of stored conversations beyond the database's own.
 
@@ -426,18 +426,19 @@ Short version — reasoning in **[docs/decisions.md](docs/decisions.md)**:
 
 API (`apps/api/.env`, see [.env.example](apps/api/.env.example)):
 
-| Variable                                                               | Default                                  | Purpose                                      |
-| ---------------------------------------------------------------------- | ---------------------------------------- | -------------------------------------------- |
-| `DATABASE_URL`                                                         | —                                        | PostgreSQL connection string                 |
-| `LLM_PROVIDER`                                                         | `anthropic` (`mock` in the example file) | `anthropic` · `openai` · `mock` (demo brain) |
-| `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL`                                | — / `claude-opus-5-5`                    | Claude credentials and model                 |
-| `OPENAI_API_KEY` / `OPENAI_MODEL`                                      | — / `gpt-5`                              | OpenAI adapter                               |
-| `LLM_EFFORT`                                                           | `medium`                                 | Reasoning depth (`low`…`max`)                |
-| `LLM_TIMEOUT_MS` / `LLM_MAX_RETRIES` / `LLM_MAX_TOKENS`                | `60000` / `2` / `16000`                  | Per-request timeout, SDK retries, output cap |
-| `AGENT_MAX_ITERATIONS` / `AGENT_TURN_BUDGET_MS`                        | `6` / `90000`                            | Agent loop bounds per message                |
-| `CHAT_RATE_LIMIT_PER_MINUTE` / `CHAT_MAX_TURNS` / `CHAT_HISTORY_TURNS` | `10` / `30` / `10`                       | Chat limits and context window               |
-| `RATE_LIMIT_PER_MINUTE`                                                | `60`                                     | Global per-client limit                      |
-| `CORS_ORIGINS`                                                         | `http://localhost:3000`                  | Comma-separated allowlist                    |
-| `PORT` / `LOG_LEVEL` / `NODE_ENV`                                      | `4000` / `info` / `development`          | Server                                       |
+| Variable                                                               | Default                                  | Purpose                                                                            |
+| ---------------------------------------------------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                                         | —                                        | PostgreSQL connection string                                                       |
+| `LLM_PROVIDER`                                                         | `anthropic` (`mock` in the example file) | `anthropic` · `openai` · `mock` (demo brain)                                       |
+| `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL`                                | — / `claude-opus-5-5`                    | Claude credentials and model                                                       |
+| `OPENAI_API_KEY` / `OPENAI_MODEL`                                      | — / `gpt-5`                              | OpenAI adapter                                                                     |
+| `LLM_EFFORT`                                                           | `medium`                                 | Reasoning depth (`low`…`max`)                                                      |
+| `LLM_TIMEOUT_MS` / `LLM_MAX_RETRIES` / `LLM_MAX_TOKENS`                | `60000` / `2` / `16000`                  | Per-request timeout, SDK retries, output cap                                       |
+| `LLM_DAILY_TOKEN_BUDGET`                                               | `0` (unlimited)                          | Daily token cap for the paid model; past it the demo brain answers until 00:00 UTC |
+| `AGENT_MAX_ITERATIONS` / `AGENT_TURN_BUDGET_MS`                        | `6` / `90000`                            | Agent loop bounds per message                                                      |
+| `CHAT_RATE_LIMIT_PER_MINUTE` / `CHAT_MAX_TURNS` / `CHAT_HISTORY_TURNS` | `10` / `30` / `10`                       | Chat limits and context window                                                     |
+| `RATE_LIMIT_PER_MINUTE`                                                | `60`                                     | Global per-client limit                                                            |
+| `CORS_ORIGINS`                                                         | `http://localhost:3000`                  | Comma-separated allowlist                                                          |
+| `PORT` / `LOG_LEVEL` / `NODE_ENV`                                      | `4000` / `info` / `development`          | Server                                                                             |
 
 Web (`apps/web/.env.local`): `NEXT_PUBLIC_API_URL` (default `http://localhost:4000/api`).

@@ -39,6 +39,9 @@ const envSchema = z.object({
   LLM_TIMEOUT_MS: z.coerce.number().int().min(1000).max(600_000).default(60_000),
   LLM_MAX_RETRIES: z.coerce.number().int().min(0).max(5).default(2),
   LLM_MAX_TOKENS: z.coerce.number().int().min(1024).max(64_000).default(16_000),
+  // Daily token cap for the paid model (0 = unlimited). Past it, the demo brain answers until
+  // midnight UTC — protects a public demo from runaway cost.
+  LLM_DAILY_TOKEN_BUDGET: z.coerce.number().int().min(0).default(0),
   // Agent loop limits per patient message (LLM calls, and wall-clock budget).
   AGENT_MAX_ITERATIONS: z.coerce.number().int().min(2).max(12).default(6),
   AGENT_TURN_BUDGET_MS: z.coerce.number().int().min(5_000).max(300_000).default(90_000),
@@ -69,6 +72,7 @@ export abstract class AppConfig {
     readonly timeoutMs: number;
     readonly maxRetries: number;
     readonly maxTokens: number;
+    readonly dailyTokenBudget: number;
     readonly anthropic: { readonly apiKey?: string; readonly model: string };
     readonly openai: { readonly apiKey?: string; readonly model: string };
   };
@@ -114,6 +118,7 @@ export function loadEnv(source: Record<string, string | undefined>): AppConfig {
       timeoutMs: env.LLM_TIMEOUT_MS,
       maxRetries: env.LLM_MAX_RETRIES,
       maxTokens: env.LLM_MAX_TOKENS,
+      dailyTokenBudget: env.LLM_DAILY_TOKEN_BUDGET,
       anthropic: { apiKey: env.ANTHROPIC_API_KEY, model: env.ANTHROPIC_MODEL },
       openai: { apiKey: env.OPENAI_API_KEY, model: env.OPENAI_MODEL },
     },

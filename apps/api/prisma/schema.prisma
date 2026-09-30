@@ -170,3 +170,16 @@ model ToolCallLog {
   @@index([messageId])
   @@map("tool_call_logs")
 }
+
+// ─────────────────────────────── LLM spend guard ───────────────────────────────
+
+/// Tokens used per UTC day, so a public demo can cap its LLM spend (see BudgetGuardedLlmProvider).
+model LlmUsageDaily {
+  day          DateTime @id @db.Date
+  inputTokens  Int      @default(0) @map("input_tokens")
+  outputTokens Int      @default(0) @map("output_tokens")
+  calls        Int      @default(0)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("llm_usage_daily")
+}

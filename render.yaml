@@ -1,0 +1,40 @@
+# Render Blueprint — the HealTrip API (NestJS). Create it in Render: New → Blueprint → this repo.
+# Secrets marked `sync: false` are entered in the Render dashboard, never committed.
+services:
+  - type: web
+    name: healtrip-api
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: >-
+      corepack pnpm install --frozen-lockfile &&
+      corepack pnpm --filter @healtrip/shared build &&
+      corepack pnpm --filter @healtrip/api build &&
+      corepack pnpm --filter @healtrip/api db:migrate &&
+      corepack pnpm --filter @healtrip/api db:seed
+    startCommand: cd apps/api && node dist/main.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: '22'
+      - key: COREPACK_ENABLE_DOWNLOAD_PROMPT
+        value: '0'
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: LLM_PROVIDER
+        value: anthropic
+      - key: ANTHROPIC_MODEL
+        value: claude-opus-5-5
+      - key: LLM_EFFORT
+        value: medium
+      # ~75 patient messages/day with Claude; past it the offline demo brain answers until 00:00 UTC.
+      - key: LLM_DAILY_TOKEN_BUDGET
+        value: '1500000'
+      - key: DATABASE_URL # Neon connection string (sslmode=require)
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: CORS_ORIGINS # the Vercel URL of the web app, e.g. https://healtrip-ai-assistant.vercel.app
+        sync: false
