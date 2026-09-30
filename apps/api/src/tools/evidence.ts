@@ -1,4 +1,4 @@
-import type { Urgency } from '@healtrip/shared';
+import type { LocalizedText, Urgency } from '@healtrip/shared';
 import type { TriageResult } from '../triage/triage.schema.js';
 
 const URGENCY_RANK: Record<Urgency, number> = {
@@ -14,20 +14,31 @@ const URGENCY_RANK: Record<Urgency, number> = {
  * accepts a doctor/hospital in the final answer only if its ID is recorded here — i.e. it came
  * from the database in this turn, not from the model's imagination.
  */
+export interface EvidencedDoctor {
+  id: string;
+  name: LocalizedText;
+  hospital: EvidencedHospital;
+}
+
+export interface EvidencedHospital {
+  id: string;
+  hasEmergency: boolean;
+}
+
 export class EvidenceRegistry {
-  private readonly doctors = new Map<string, { hospitalId: string }>();
-  private readonly hospitals = new Set<string>();
+  private readonly doctors = new Map<string, EvidencedDoctor>();
+  private readonly hospitals = new Map<string, EvidencedHospital>();
   private readonly triage: TriageResult[] = [];
 
-  recordDoctors(doctors: { id: string; hospital: { id: string } }[]): void {
+  recordDoctors(doctors: EvidencedDoctor[]): void {
     for (const d of doctors) {
-      this.doctors.set(d.id, { hospitalId: d.hospital.id });
-      this.hospitals.add(d.hospital.id); // a doctor's hospital was returned from the DB too
+      this.doctors.set(d.id, { id: d.id, name: d.name, hospital: d.hospital });
+      this.recordHospitals([d.hospital]); // a doctor's hospital was returned from the DB too
     }
   }
 
-  recordHospitals(hospitals: { id: string }[]): void {
-    for (const h of hospitals) this.hospitals.add(h.id);
+  recordHospitals(hospitals: EvidencedHospital[]): void {
+    for (const h of hospitals) this.hospitals.set(h.id, { id: h.id, hasEmergency: h.hasEmergency });
   }
 
   recordTriage(result: TriageResult): void {
@@ -47,7 +58,24 @@ export class EvidenceRegistry {
   }
 
   hospitalIds(): string[] {
-    return [...this.hospitals];
+    return [...this.hospitals.keys()];
+  }
+
+  allDoctors(): EvidencedDoctor[] {
+    return [...this.doctors.values()];
+  }
+
+  hospital(id: string): EvidencedHospital | undefined {
+    return this.hospitals.get(id);
+  }
+
+  /** Independent copy — used to judge an answer against what the model had seen *before* it. */
+  snapshot(): EvidenceRegistry {
+    const copy = new EvidenceRegistry();
+    copy.recordDoctors(this.allDoctors());
+    copy.recordHospitals([...this.hospitals.values()]);
+    for (const t of this.triage) copy.recordTriage(t);
+    return copy;
   }
 
   triageResults(): readonly TriageResult[] {

@@ -39,6 +39,9 @@ const envSchema = z.object({
   LLM_TIMEOUT_MS: z.coerce.number().int().min(1000).max(600_000).default(60_000),
   LLM_MAX_RETRIES: z.coerce.number().int().min(0).max(5).default(2),
   LLM_MAX_TOKENS: z.coerce.number().int().min(1024).max(64_000).default(16_000),
+  // Agent loop limits per patient message (LLM calls, and wall-clock budget).
+  AGENT_MAX_ITERATIONS: z.coerce.number().int().min(2).max(12).default(6),
+  AGENT_TURN_BUDGET_MS: z.coerce.number().int().min(5_000).max(300_000).default(90_000),
 });
 
 const REQUIRED_KEY_BY_PROVIDER = {
@@ -64,6 +67,7 @@ export abstract class AppConfig {
     readonly anthropic: { readonly apiKey?: string; readonly model: string };
     readonly openai: { readonly apiKey?: string; readonly model: string };
   };
+  abstract readonly agent: { readonly maxIterations: number; readonly turnBudgetMs: number };
 }
 
 export class InvalidEnvironmentError extends Error {
@@ -103,6 +107,7 @@ export function loadEnv(source: Record<string, string | undefined>): AppConfig {
       anthropic: { apiKey: env.ANTHROPIC_API_KEY, model: env.ANTHROPIC_MODEL },
       openai: { apiKey: env.OPENAI_API_KEY, model: env.OPENAI_MODEL },
     },
+    agent: { maxIterations: env.AGENT_MAX_ITERATIONS, turnBudgetMs: env.AGENT_TURN_BUDGET_MS },
   });
 }
 

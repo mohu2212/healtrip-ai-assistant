@@ -26,7 +26,8 @@
     "db:studio": "prisma studio",
     "db:local": "prisma dev --name healtrip --detach",
     "test:int": "vitest run --config ./vitest.config.int.ts",
-    "llm:smoke": "tsx scripts/llm-smoke.ts"
+    "llm:smoke": "tsx scripts/llm-smoke.ts",
+    "agent:chat": "tsx scripts/agent-chat.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.129.0",

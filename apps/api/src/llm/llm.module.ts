@@ -5,7 +5,8 @@ import { AppConfig } from '../config/env.schema.js';
 import { LlmProvider } from './llm.types.js';
 import { AnthropicLlmProvider } from './providers/anthropic.provider.js';
 import { OpenAiLlmProvider } from './providers/openai.provider.js';
-import { ScriptedLlmProvider, scripted } from './providers/scripted.provider.js';
+import { demoLlmScript } from '../demo/demo-llm.script.js';
+import { ScriptedLlmProvider } from './providers/scripted.provider.js';
 
 /** Picks the provider from configuration. API keys never leave this factory. */
 export function createLlmProvider(config: AppConfig): LlmProvider {
@@ -28,10 +29,8 @@ export function createLlmProvider(config: AppConfig): LlmProvider {
         ...modelOptions,
       });
     case 'mock':
-      // Placeholder until the agent's offline demo script is wired in.
-      return new ScriptedLlmProvider(() =>
-        scripted.text('Demo mode: no LLM provider is configured.'),
-      );
+      // Offline demo brain: deterministic stand-in for the model; the rest of the pipeline is real.
+      return new ScriptedLlmProvider(demoLlmScript);
   }
 }
 

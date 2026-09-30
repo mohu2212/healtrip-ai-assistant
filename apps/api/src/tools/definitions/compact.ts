@@ -22,7 +22,7 @@ export function compactDoctor(d: DoctorDto) {
     hospital: {
       id: d.hospital.id,
       name: d.hospital.name,
-      city: d.hospital.city.en,
+      city: d.hospital.city,
       country: d.hospital.country,
       hasEmergency: d.hospital.hasEmergency,
     },
@@ -40,7 +40,7 @@ export function compactHospital(h: HospitalDto) {
   return {
     id: h.id,
     name: h.name,
-    city: h.city.en,
+    city: h.city,
     country: h.country,
     hasEmergency: h.hasEmergency,
     emergencyPhone: h.emergencyPhone,

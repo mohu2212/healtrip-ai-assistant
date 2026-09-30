@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
+import { AgentModule } from './agent/agent.module.js';
 import { CatalogModule } from './catalog/catalog.module.js';
 import { ClockModule } from './common/clock.js';
 import { buildLoggerParams } from './common/logging/logger.config.js';
@@ -31,6 +32,7 @@ import { HealthController } from './health/health.controller.js';
     CatalogModule,
     LlmModule,
     ToolsModule,
+    AgentModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

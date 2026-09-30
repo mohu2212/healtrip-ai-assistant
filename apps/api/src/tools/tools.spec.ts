@@ -63,7 +63,7 @@ describe('agent tools', () => {
         hospital: {
           id: 'hosp_01',
           name: { en: 'Test Heart Institute', ar: 'معهد القلب التجريبي' },
-          city: 'Cairo',
+          city: { en: 'Cairo', ar: 'القاهرة' },
           country: 'EG',
           hasEmergency: true,
         },
