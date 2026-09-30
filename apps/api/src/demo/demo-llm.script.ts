@@ -263,7 +263,8 @@ const texts = {
       'اتصل برقم الطوارئ المحلي أو توجّه إلى أقرب قسم طوارئ الآن — لا تنتظر موعدًا. ' +
       'أرقام الطوارئ: مصر 123، الإمارات 998، تركيا 112. أقسام الطوارئ في شبكتنا:',
     hospitalLine: (h: HospitalView) =>
-      `- ${h.name.ar} (${h.city.ar})${h.emergencyPhone ? ` — خط الطوارئ ${h.emergencyPhone}` : ''}`,
+      // LRI…PDI isolates keep the phone number left-to-right inside Arabic text (no reordering).
+      `- ${h.name.ar} (${h.city.ar})${h.emergencyPhone ? ` — خط الطوارئ ⁦${h.emergencyPhone}⁩` : ''}`,
     recommendIntro: (t: TriageResult) =>
       `بناءً على ما ذكرته، الخطوة التالية المقترحة هي ${STEP_LABEL.ar[t.nextStep] ?? t.nextStep}. خيارات من شبكة HealTrip:`,
     doctorLine: (d: DoctorView) =>
