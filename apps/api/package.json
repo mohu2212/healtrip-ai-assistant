@@ -24,7 +24,8 @@
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset",
     "db:studio": "prisma studio",
-    "db:local": "prisma dev --name healtrip --detach"
+    "db:local": "prisma dev --name healtrip --detach",
+    "test:int": "vitest run --config ./vitest.config.int.ts"
   },
   "dependencies": {
     "@healtrip/shared": "workspace:*",

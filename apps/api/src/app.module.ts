@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
+import { CatalogModule } from './catalog/catalog.module.js';
+import { ClockModule } from './common/clock.js';
 import { buildLoggerParams } from './common/logging/logger.config.js';
 import { ConfigModule } from './config/config.module.js';
 import { AppConfig } from './config/env.schema.js';
@@ -23,6 +25,8 @@ import { HealthController } from './health/health.controller.js';
       }),
     }),
     DatabaseModule,
+    ClockModule,
+    CatalogModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

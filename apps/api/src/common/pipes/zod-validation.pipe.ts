@@ -1,4 +1,4 @@
-import { PipeTransform } from '@nestjs/common';
+import type { ArgumentMetadata, PipeTransform } from '@nestjs/common';
 import type { z } from 'zod';
 import { AppError } from '../errors/app-error.js';
 
@@ -12,15 +12,22 @@ import { AppError } from '../errors/app-error.js';
 export class ZodValidationPipe<S extends z.ZodType> implements PipeTransform<unknown, z.output<S>> {
   constructor(private readonly schema: S) {}
 
-  transform(value: unknown): z.output<S> {
+  transform(value: unknown, metadata?: ArgumentMetadata): z.output<S> {
     const result = this.schema.safeParse(value);
     if (result.success) return result.data;
 
     throw AppError.validation(
       result.error.issues.map((issue) => ({
-        path: issue.path.map(String).join('.') || '(root)',
+        path: describePath(issue, metadata?.data),
         message: issue.message,
       })),
     );
   }
+}
+
+/** `text`, `meta.n`, the route param name (e.g. `id`), or the offending key for unknown keys. */
+function describePath(issue: z.core.$ZodIssue, paramName: string | undefined): string {
+  const segments = issue.path.map(String);
+  if (issue.code === 'unrecognized_keys') segments.push(issue.keys.join(','));
+  return segments.join('.') || paramName || '(root)';
 }
