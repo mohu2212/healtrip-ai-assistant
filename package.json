@@ -2,7 +2,7 @@
   "name": "healtrip-patient-decision-assistant",
   "version": "0.1.0",
   "private": true,
-  "description": "HealTrip AI Patient Decision Assistant — prototype (NestJS + Next.js + tool-calling AI agent)",
+  "description": "HealTrip AI Patient Decision Assistant \u2014 prototype (NestJS + Next.js + tool-calling AI agent)",
   "packageManager": "pnpm@11.5.3",
   "engines": {
     "node": ">=22"
@@ -21,7 +21,7 @@
     "typecheck": "pnpm -r typecheck",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm build && pnpm test:cov && pnpm test:e2e"
+    "verify": "pnpm --filter @healtrip/shared build && pnpm format:check && pnpm lint && pnpm typecheck && pnpm build && pnpm test:cov && pnpm test:e2e"
   },
   "devDependencies": {
     "prettier": "^3.4.2"

@@ -28,6 +28,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # The shared contract package must be built before anything that imports it is type-checked.
+      - run: pnpm --filter @healtrip/shared build
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm typecheck
