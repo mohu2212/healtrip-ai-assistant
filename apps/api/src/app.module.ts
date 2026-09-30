@@ -9,6 +9,7 @@ import { ConfigModule } from './config/config.module.js';
 import { AppConfig } from './config/env.schema.js';
 import { DatabaseModule } from './database/database.module.js';
 import { LlmModule } from './llm/llm.module.js';
+import { ToolsModule } from './tools/tools.module.js';
 import { HealthController } from './health/health.controller.js';
 
 @Module({
@@ -29,6 +30,7 @@ import { HealthController } from './health/health.controller.js';
     ClockModule,
     CatalogModule,
     LlmModule,
+    ToolsModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
