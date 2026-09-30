@@ -42,6 +42,11 @@ const envSchema = z.object({
   // Agent loop limits per patient message (LLM calls, and wall-clock budget).
   AGENT_MAX_ITERATIONS: z.coerce.number().int().min(2).max(12).default(6),
   AGENT_TURN_BUDGET_MS: z.coerce.number().int().min(5_000).max(300_000).default(90_000),
+  // Chat: per-client messages per minute (each one costs LLM calls), turns per conversation, and
+  // how many earlier turns are sent to the model as context.
+  CHAT_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).default(10),
+  CHAT_MAX_TURNS: z.coerce.number().int().min(1).max(200).default(30),
+  CHAT_HISTORY_TURNS: z.coerce.number().int().min(0).max(50).default(10),
 });
 
 const REQUIRED_KEY_BY_PROVIDER = {
@@ -68,6 +73,11 @@ export abstract class AppConfig {
     readonly openai: { readonly apiKey?: string; readonly model: string };
   };
   abstract readonly agent: { readonly maxIterations: number; readonly turnBudgetMs: number };
+  abstract readonly chat: {
+    readonly rateLimitPerMinute: number;
+    readonly maxTurns: number;
+    readonly historyTurns: number;
+  };
 }
 
 export class InvalidEnvironmentError extends Error {
@@ -108,6 +118,11 @@ export function loadEnv(source: Record<string, string | undefined>): AppConfig {
       openai: { apiKey: env.OPENAI_API_KEY, model: env.OPENAI_MODEL },
     },
     agent: { maxIterations: env.AGENT_MAX_ITERATIONS, turnBudgetMs: env.AGENT_TURN_BUDGET_MS },
+    chat: {
+      rateLimitPerMinute: env.CHAT_RATE_LIMIT_PER_MINUTE,
+      maxTurns: env.CHAT_MAX_TURNS,
+      historyTurns: env.CHAT_HISTORY_TURNS,
+    },
   });
 }
 
