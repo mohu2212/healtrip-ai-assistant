@@ -25,7 +25,7 @@ export const demoLlmScript: LlmScript = (request, callIndex) => {
 
   if (triage.nextStep === 'NEED_MORE_INFO') {
     return call(SUBMIT_RESPONSE, {
-      message: t.askIntro,
+      message: turn.alreadyAsked ? t.askFollowUp : t.askIntro,
       nextStep: 'NEED_MORE_INFO',
       clarifyingQuestions: triage.missingInfo.map((item) => t.questions[item]),
       quickReplies: [...t.quickReplies],
@@ -208,6 +208,7 @@ const flagsText = (language: Locale, flags: string[]) =>
 const texts = {
   en: {
     askIntro: 'Thank you for sharing this. To judge how urgent it is, I need a few details:',
+    askFollowUp: 'Thanks, that helps. I just need a little more information:',
     questions: {
       red_flags:
         'Does the pain spread to your arm, jaw or back, or do you have shortness of breath, a cold sweat, nausea or fainting?',
@@ -232,6 +233,7 @@ const texts = {
   },
   ar: {
     askIntro: 'شكرًا لمشاركتك. لتحديد مدى الاستعجال أحتاج إلى بعض التفاصيل:',
+    askFollowUp: 'شكرًا، هذا مفيد. أحتاج فقط إلى معلومات إضافية قليلة:',
     questions: {
       red_flags:
         'هل يمتد الألم إلى الذراع أو الفك أو الظهر، أو تعاني من ضيق في التنفس أو عرق بارد أو غثيان أو إغماء؟',
