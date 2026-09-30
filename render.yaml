@@ -7,7 +7,7 @@ services:
     plan: free
     region: frankfurt
     buildCommand: >-
-      corepack pnpm install --frozen-lockfile &&
+      corepack pnpm install --frozen-lockfile --prod=false &&
       corepack pnpm --filter @healtrip/shared build &&
       corepack pnpm --filter @healtrip/api build &&
       corepack pnpm --filter @healtrip/api db:migrate &&
