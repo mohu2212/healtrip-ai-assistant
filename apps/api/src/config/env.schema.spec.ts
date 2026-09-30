@@ -23,7 +23,14 @@ describe('loadEnv', () => {
       port: 4000,
       corsOrigins: ['http://localhost:3000'],
       rateLimitPerMinute: 60,
-      llm: { provider: 'mock', anthropic: { model: 'claude-sonnet-5-5' } },
+      llm: {
+        provider: 'mock',
+        effort: 'medium',
+        timeoutMs: 60_000,
+        maxRetries: 2,
+        maxTokens: 16_000,
+        anthropic: { model: 'claude-opus-5-5' },
+      },
     });
   });
 

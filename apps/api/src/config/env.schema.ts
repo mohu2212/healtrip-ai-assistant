@@ -3,6 +3,9 @@ import { z } from 'zod';
 const LLM_PROVIDERS = ['anthropic', 'openai', 'mock'] as const;
 export type LlmProviderName = (typeof LLM_PROVIDERS)[number];
 
+const LLM_EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
+export type LlmEffort = (typeof LLM_EFFORTS)[number];
+
 /** Treat `FOO=` (empty string) the same as unset, so defaults and "required" checks behave. */
 const optionalString = z.preprocess(
   (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
@@ -27,9 +30,15 @@ const envSchema = z.object({
   DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
   LLM_PROVIDER: z.enum(LLM_PROVIDERS).default('anthropic'),
   ANTHROPIC_API_KEY: optionalString,
-  ANTHROPIC_MODEL: z.string().default('claude-sonnet-5-5'),
+  ANTHROPIC_MODEL: z.string().default('claude-opus-5-5'),
   OPENAI_API_KEY: optionalString,
   OPENAI_MODEL: z.string().default('gpt-5'),
+  // Reasoning depth. Set explicitly: Claude Opus 5.5 defaults to `medium` when omitted.
+  LLM_EFFORT: z.enum(LLM_EFFORTS).default('medium'),
+  // Per-request timeout; the SDKs retry 408/409/429/5xx/connection errors up to LLM_MAX_RETRIES.
+  LLM_TIMEOUT_MS: z.coerce.number().int().min(1000).max(600_000).default(60_000),
+  LLM_MAX_RETRIES: z.coerce.number().int().min(0).max(5).default(2),
+  LLM_MAX_TOKENS: z.coerce.number().int().min(1024).max(64_000).default(16_000),
 });
 
 const REQUIRED_KEY_BY_PROVIDER = {
@@ -48,6 +57,10 @@ export abstract class AppConfig {
   abstract readonly databaseUrl: string;
   abstract readonly llm: {
     readonly provider: LlmProviderName;
+    readonly effort: LlmEffort;
+    readonly timeoutMs: number;
+    readonly maxRetries: number;
+    readonly maxTokens: number;
     readonly anthropic: { readonly apiKey?: string; readonly model: string };
     readonly openai: { readonly apiKey?: string; readonly model: string };
   };
@@ -83,6 +96,10 @@ export function loadEnv(source: Record<string, string | undefined>): AppConfig {
     databaseUrl: env.DATABASE_URL,
     llm: {
       provider: env.LLM_PROVIDER,
+      effort: env.LLM_EFFORT,
+      timeoutMs: env.LLM_TIMEOUT_MS,
+      maxRetries: env.LLM_MAX_RETRIES,
+      maxTokens: env.LLM_MAX_TOKENS,
       anthropic: { apiKey: env.ANTHROPIC_API_KEY, model: env.ANTHROPIC_MODEL },
       openai: { apiKey: env.OPENAI_API_KEY, model: env.OPENAI_MODEL },
     },

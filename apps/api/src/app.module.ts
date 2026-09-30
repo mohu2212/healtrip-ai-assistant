@@ -8,6 +8,7 @@ import { buildLoggerParams } from './common/logging/logger.config.js';
 import { ConfigModule } from './config/config.module.js';
 import { AppConfig } from './config/env.schema.js';
 import { DatabaseModule } from './database/database.module.js';
+import { LlmModule } from './llm/llm.module.js';
 import { HealthController } from './health/health.controller.js';
 
 @Module({
@@ -27,6 +28,7 @@ import { HealthController } from './health/health.controller.js';
     DatabaseModule,
     ClockModule,
     CatalogModule,
+    LlmModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
