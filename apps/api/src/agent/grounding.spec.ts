@@ -118,7 +118,12 @@ describe('validateSubmission', () => {
   it('requires a triage before any recommendation', () => {
     const result = validateSubmission(submission(), evidenceWith(), { triageRequired: false });
     expect(codes(result)).toEqual(['TRIAGE_REQUIRED']);
-    expect(result.sanitized.nextStep).toBe('NEED_MORE_INFO');
+    // Even real, evidenced doctors are withheld until the urgency is assessed.
+    expect(result.sanitized).toEqual({
+      nextStep: 'NEED_MORE_INFO',
+      recommendedDoctorIds: [],
+      recommendedHospitalIds: [],
+    });
   });
 
   it('allows clarifying questions without triage, unless an emergency is suspected', () => {

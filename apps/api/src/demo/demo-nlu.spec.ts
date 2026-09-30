@@ -11,7 +11,7 @@ describe('extractFacts (demo brain NLU)', () => {
       redFlagsScreened: false,
       redFlags: [],
       onset: 'unknown',
-      hasExistingDiagnosis: true, // "second opinion" is mentioned
+      hasExistingDiagnosis: false, // a second opinion is only listed as an option
     });
     expect(city).toBeNull();
   });
@@ -43,6 +43,24 @@ describe('extractFacts (demo brain NLU)', () => {
       age: 45,
     });
     expect(city).toBe('Dubai');
+  });
+
+  it('detects an explicit second-opinion request or an existing diagnosis', () => {
+    expect(
+      extractFacts('I want a second opinion on my heart', false).triage.hasExistingDiagnosis,
+    ).toBe(true);
+    expect(extractFacts('I was diagnosed with angina', false).triage.hasExistingDiagnosis).toBe(
+      true,
+    );
+    expect(extractFacts('عايز رأي تاني في التشخيص', false).triage.hasExistingDiagnosis).toBe(true);
+  });
+
+  it('recognizes off-topic requests', () => {
+    expect(extractFacts('What is the best pizza place in Cairo?', false).isHealthRelated).toBe(
+      false,
+    );
+    expect(extractFacts('I feel dizzy', false).isHealthRelated).toBe(true);
+    expect(extractFacts('عندي وجع في بطني', false).isHealthRelated).toBe(true);
   });
 
   it('maps reported warning signs to triage red flags and respects denials', () => {

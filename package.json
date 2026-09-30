@@ -13,10 +13,15 @@
     "dev:web": "pnpm --filter @healtrip/web dev",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
+    "test:cov": "pnpm -r test:cov",
+    "test:e2e": "pnpm --filter @healtrip/api test:e2e",
+    "test:int": "pnpm --filter @healtrip/api test:int",
+    "eval": "pnpm --filter @healtrip/api eval",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm build && pnpm test:cov && pnpm test:e2e"
   },
   "devDependencies": {
     "prettier": "^3.4.2"

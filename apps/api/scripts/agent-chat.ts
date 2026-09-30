@@ -5,20 +5,9 @@
  *   pnpm --filter @healtrip/api agent:chat                       # built-in scenarios
  *   pnpm --filter @healtrip/api agent:chat -- "message" ["next message" …]
  */
-import { existsSync } from 'node:fs';
-import { Logger } from '@nestjs/common';
 import type { Locale } from '@healtrip/shared';
-import { AgentService, type ConversationTurn } from '../src/agent/agent.service.js';
-import { CatalogRepository } from '../src/catalog/catalog.repository.js';
-import { CatalogService } from '../src/catalog/catalog.service.js';
-import { SystemClock } from '../src/common/clock.js';
-import { loadEnv } from '../src/config/env.schema.js';
-import { PrismaService } from '../src/database/prisma.service.js';
-import { createLlmProvider } from '../src/llm/llm.module.js';
-import { createToolRegistry } from '../src/tools/tools.module.js';
-
-if (existsSync('.env')) process.loadEnvFile('.env');
-Logger.overrideLogger(['warn', 'error']);
+import type { ConversationTurn } from '../src/agent/agent.service.js';
+import { createAgentForScripts } from './lib/create-agent.js';
 
 const SCENARIOS: { title: string; locale: Locale; messages: string[] }[] = [
   {
@@ -49,17 +38,7 @@ const scenarios = custom.length
   ? [{ title: 'Custom', locale: 'en' as Locale, messages: custom }]
   : SCENARIOS;
 
-// Explicit composition (tsx doesn't emit decorator metadata, so no Nest DI here) — same wiring as the app.
-const config = loadEnv(process.env);
-const clock = new SystemClock();
-const prisma = new PrismaService(config);
-const catalog = new CatalogService(new CatalogRepository(prisma), clock);
-const agent = new AgentService(
-  createLlmProvider(config),
-  createToolRegistry(catalog),
-  clock,
-  config,
-);
+const { agent, close } = createAgentForScripts();
 
 for (const scenario of scenarios) {
   console.log(`\n══════ ${scenario.title}`);
@@ -82,4 +61,4 @@ for (const scenario of scenarios) {
     );
   }
 }
-await prisma.$disconnect();
+await close();

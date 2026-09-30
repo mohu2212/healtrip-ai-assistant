@@ -9,5 +9,11 @@ export default defineConfig({
     globals: true,
     include: ['src/**/*.spec.{ts,tsx}'],
     setupFiles: ['./src/test/setup.ts'],
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/**/*.spec.{ts,tsx}', 'src/test/**', 'src/app/**', 'src/proxy.ts'],
+      reporter: ['text-summary', 'html'],
+    },
   },
 });

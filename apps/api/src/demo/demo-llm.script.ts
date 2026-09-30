@@ -18,10 +18,22 @@ export const demoLlmScript: LlmScript = (request, callIndex) => {
   const facts = extractFacts(turn.patientText, turn.alreadyAsked);
   const call = (name: string, input: unknown) => toolCall(`demo_${callIndex}_${name}`, name, input);
 
+  const t = texts[turn.language];
+
+  // Off-topic: explain the scope instead of triaging (a real model does this from the prompt).
+  if (!facts.isHealthRelated && !turn.lastResult('assess_urgency')) {
+    return call(SUBMIT_RESPONSE, {
+      message: t.offTopic,
+      nextStep: 'NEED_MORE_INFO',
+      clarifyingQuestions: [],
+      quickReplies: [],
+      recommendedDoctorIds: [],
+      recommendedHospitalIds: [],
+    } satisfies Submission);
+  }
+
   const triage = turn.lastResult<TriageResult>('assess_urgency');
   if (!triage) return call('assess_urgency', facts.triage);
-
-  const t = texts[turn.language];
 
   if (triage.nextStep === 'NEED_MORE_INFO') {
     return call(SUBMIT_RESPONSE, {
@@ -209,6 +221,8 @@ const texts = {
   en: {
     askIntro: 'Thank you for sharing this. To judge how urgent it is, I need a few details:',
     askFollowUp: 'Thanks, that helps. I just need a little more information:',
+    offTopic:
+      'I can only help with health concerns: describe your symptoms and I will help you decide the right next step — emergency care, a specialist, or a second opinion — with options from the HealTrip network.',
     questions: {
       red_flags:
         'Does the pain spread to your arm, jaw or back, or do you have shortness of breath, a cold sweat, nausea or fainting?',
@@ -234,6 +248,8 @@ const texts = {
   ar: {
     askIntro: 'شكرًا لمشاركتك. لتحديد مدى الاستعجال أحتاج إلى بعض التفاصيل:',
     askFollowUp: 'شكرًا، هذا مفيد. أحتاج فقط إلى معلومات إضافية قليلة:',
+    offTopic:
+      'يمكنني المساعدة في المخاوف الصحية فقط: صف أعراضك وسأساعدك في تحديد الخطوة التالية المناسبة — طوارئ، طبيب متخصص، أو رأي ثانٍ — مع خيارات من شبكة HealTrip.',
     questions: {
       red_flags:
         'هل يمتد الألم إلى الذراع أو الفك أو الظهر، أو تعاني من ضيق في التنفس أو عرق بارد أو غثيان أو إغماء؟',

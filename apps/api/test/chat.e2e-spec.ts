@@ -1,17 +1,8 @@
 import type { NestExpressApplication } from '@nestjs/platform-express';
-import request from 'supertest';
-import { CatalogRepository } from '../src/catalog/catalog.repository.js';
-import {
-  cardiologyRow,
-  doctorRow,
-  emergencyRow,
-  hospitalRow,
-} from '../src/catalog/testing/catalog.fixtures.js';
-import { ConversationRepository } from '../src/chat/conversation.repository.js';
 import { LlmError, LlmProvider } from '../src/llm/llm.types.js';
 import { ScriptedLlmProvider } from '../src/llm/providers/scripted.provider.js';
-import { createTestApp } from './create-test-app.js';
-import { InMemoryConversationRepository } from './support/in-memory-conversation.repository.js';
+import { createChatTestApp } from './support/chat-test-app.js';
+import type { InMemoryConversationRepository } from './support/in-memory-conversation.repository.js';
 
 /**
  * The chat API over HTTP with the real middleware, agent, tools, triage rules and grounding — the
@@ -20,35 +11,17 @@ import { InMemoryConversationRepository } from './support/in-memory-conversation
 describe('Chat API (e2e)', () => {
   let app: NestExpressApplication;
   let conversations: InMemoryConversationRepository;
-
-  const catalogRepository = {
-    findSpecialties: async () => [cardiologyRow, emergencyRow],
-    findDoctors: async (filters: { ids?: string[] }) =>
-      [doctorRow()].filter((d) => !filters.ids || filters.ids.includes(d.id)),
-    findDoctorById: async () => doctorRow(),
-    findHospitals: async (filters: { ids?: string[] }) =>
-      [hospitalRow()].filter((h) => !filters.ids || filters.ids.includes(h.id)),
-    findHospitalById: async () => hospitalRow(),
-  };
+  let harness: Awaited<ReturnType<typeof createChatTestApp>>;
 
   async function start(options: { env?: Record<string, string>; llm?: LlmProvider } = {}) {
-    conversations = new InMemoryConversationRepository();
-    ({ app } = await createTestApp({
-      env: options.env,
-      overrides: [
-        { provide: ConversationRepository, useValue: conversations },
-        { provide: CatalogRepository, useValue: catalogRepository },
-        ...(options.llm ? [{ provide: LlmProvider, useValue: options.llm }] : []),
-      ],
-    }));
+    harness = await createChatTestApp(options);
+    ({ app, conversations } = harness);
   }
   afterEach(() => app?.close());
 
-  const http = () => request(app.getHttpServer());
-  const newConversation = async (locale = 'en') =>
-    (await http().post('/api/conversations').send({ locale }).expect(201)).body.data.id as string;
-  const send = (id: string, text: string) =>
-    http().post(`/api/conversations/${id}/messages`).send({ text });
+  const http = () => harness.http();
+  const newConversation = (locale = 'en') => harness.newConversation(locale);
+  const send = (id: string, text: string) => harness.send(id, text);
 
   describe('happy path (demo brain)', () => {
     beforeEach(() => start());

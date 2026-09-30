@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Lint, types, build, unit + e2e tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # e2e tests run the real app with in-memory fakes and the offline demo brain — no DB, no API key.
+      LLM_PROVIDER: mock
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4 # version from package.json "packageManager"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm build
+      - name: Unit tests with coverage (thresholds enforced on agent, triage and tools)
+        run: pnpm test:cov
+      - name: API e2e tests (incl. adversarial safety suite)
+        run: pnpm test:e2e
+
+  integration:
+    name: Integration tests + agent evals on real Postgres
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: healtrip
+          POSTGRES_PASSWORD: healtrip
+          POSTGRES_DB: healtrip
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U healtrip"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://healtrip:healtrip@localhost:5432/healtrip
+      TEST_DATABASE_URL: postgresql://healtrip:healtrip@localhost:5432/healtrip
+      LLM_PROVIDER: mock
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @healtrip/shared build
+      - name: Apply migrations (proves the migration on real PostgreSQL)
+        run: pnpm --filter @healtrip/api db:migrate
+      - run: pnpm --filter @healtrip/api db:seed
+      - run: pnpm test:int
+      - name: Agent evals (demo brain regression gate)
+        run: pnpm eval

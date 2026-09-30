@@ -34,7 +34,12 @@ const toAsciiDigits = (text: string) =>
 export interface DemoFacts {
   triage: AssessUrgencyInput;
   city: string | null;
+  /** false when the conversation contains nothing health-related (off-topic request). */
+  isHealthRelated: boolean;
 }
+
+const HEALTH_WORDS =
+  /pain|ache|hurt|\b(ill|sick)\b|fever|cough|symptom|doctor|diagnos|breath|chest|heart|dizz|faint|vomit|nause|bleed|opinion|clinic|hospital|(^|\s)الم(\s|$)|وجع|تعبان|مريض|حراره|كحه|سعال|اعراض|دكتور|طبيب|تشخيص|صدر|قلب|دوخه|تنفس|مستشفي/;
 
 /**
  * @param patientText everything the patient wrote in the conversation (all turns)
@@ -116,9 +121,11 @@ export function extractFacts(patientText: string, alreadyAsked: boolean): DemoFa
   if (has(text, /family history|runs in (my|the) family|وراثي|في العيله|في العائله/))
     riskFactors.push('family_history');
 
+  // An existing diagnosis, or an explicit request for a second opinion — merely listing it as an
+  // option ("…or seek a second opinion?") is not enough.
   const hasExistingDiagnosis = has(
     text,
-    /second opinion|diagnos|told me i have|recommended (surgery|a stent)|راي ثاني|رأي ثاني|تشخيص|شخصني|شخصوني/,
+    /diagnos|told me i have|recommended (surgery|a stent)|(want|would like|need|looking for|get|getting) a second opinion|(اريد|عايز|محتاج|اطلب) (راي|رأي) (ثاني|تاني)|تشخيص|شخصني|شخصوني/,
   );
 
   const city = CITIES.find(([pattern]) => pattern.test(text))?.[1] ?? null;
@@ -144,5 +151,6 @@ export function extractFacts(patientText: string, alreadyAsked: boolean): DemoFa
       hasExistingDiagnosis,
     },
     city,
+    isHealthRelated: chiefComplaint !== 'other' || redFlags.size > 0 || has(text, HEALTH_WORDS),
   };
 }

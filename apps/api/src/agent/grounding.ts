@@ -85,15 +85,20 @@ export function validateSubmission(
     });
   }
 
-  const nextStep =
-    requiredNextStep ?? (evidence.triageResults().length ? submission.nextStep : 'NEED_MORE_INFO');
+  const triaged = evidence.triageResults().length > 0;
+  const nextStep = requiredNextStep ?? (triaged ? submission.nextStep : 'NEED_MORE_INFO');
   const emergency = nextStep === 'ER_NOW';
-  const doctorIds = emergency
-    ? [] // in an emergency the action is the emergency department, not an appointment
-    : submission.recommendedDoctorIds.filter((id) => evidence.hasDoctor(id));
-  const hospitalIds = submission.recommendedHospitalIds.filter(
-    (id) => evidence.hasHospital(id) && (!emergency || evidence.hospital(id)?.hasEmergency),
-  );
+  // Nothing is recommended before the urgency is known (it might be an emergency), and in an
+  // emergency the action is the emergency department — not a doctor's appointment.
+  const doctorIds =
+    !triaged || emergency
+      ? []
+      : submission.recommendedDoctorIds.filter((id) => evidence.hasDoctor(id));
+  const hospitalIds = !triaged
+    ? []
+    : submission.recommendedHospitalIds.filter(
+        (id) => evidence.hasHospital(id) && (!emergency || evidence.hospital(id)?.hasEmergency),
+      );
 
   return {
     problems,
