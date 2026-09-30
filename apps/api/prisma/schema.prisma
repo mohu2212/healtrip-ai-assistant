@@ -1,0 +1,172 @@
+// HealTrip Patient Decision Assistant — database schema.
+//
+// Conventions
+// - Models/fields are camelCase in code, mapped to snake_case tables/columns in Postgres.
+// - Catalog entities (specialties, hospitals, doctors, slots) use short, prefixed, human-readable
+//   string IDs (e.g. "doc_014"). The AI agent references entities *only* by ID; short IDs reduce
+//   copy errors, and the prefix lets the grounding validator reject a hospital ID used as a doctor.
+// - Conversation data uses UUIDs (unguessable session identifiers).
+// - Money is stored as integer USD; languages as ISO-639-1 codes; countries as ISO-3166 alpha-2.
+
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  runtime                = "nodejs"
+  moduleFormat           = "esm"
+  generatedFileExtension = "ts"
+  importFileExtension    = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────── Catalog (read-only for the agent) ───────────────────────────────
+
+model Specialty {
+  id     String @id // spec_<code>
+  code   String @unique // stable machine code used by agent tools, e.g. "cardiology"
+  nameEn String @map("name_en")
+  nameAr String @map("name_ar")
+
+  doctors   Doctor[]
+  hospitals HospitalSpecialty[]
+
+  @@map("specialties")
+}
+
+model Hospital {
+  id             String  @id // hosp_<nn>
+  nameEn         String  @map("name_en")
+  nameAr         String  @map("name_ar")
+  city           String // English city name, used for filtering
+  cityAr         String  @map("city_ar")
+  country        String  @db.Char(2) // ISO-3166 alpha-2
+  hasEmergency   Boolean @map("has_emergency") // 24/7 emergency department
+  emergencyPhone String? @map("emergency_phone")
+  phone          String
+  accreditation  String? // e.g. "JCI"
+  rating         Float // 0–5
+
+  doctors     Doctor[]
+  specialties HospitalSpecialty[]
+
+  @@index([country, city])
+  @@map("hospitals")
+}
+
+/// Which specialties a hospital offers (many-to-many).
+model HospitalSpecialty {
+  hospitalId  String @map("hospital_id")
+  specialtyId String @map("specialty_id")
+
+  hospital  Hospital  @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  specialty Specialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+
+  @@id([hospitalId, specialtyId])
+  @@index([specialtyId])
+  @@map("hospital_specialties")
+}
+
+model Doctor {
+  id                  String   @id // doc_<nnn>
+  nameEn              String   @map("name_en")
+  nameAr              String   @map("name_ar")
+  titleEn             String   @map("title_en") // e.g. "Consultant Cardiologist"
+  titleAr             String   @map("title_ar")
+  specialtyId         String   @map("specialty_id")
+  subspecialtyEn      String?  @map("subspecialty_en")
+  subspecialtyAr      String?  @map("subspecialty_ar")
+  hospitalId          String   @map("hospital_id")
+  languages           String[] // ISO-639-1 codes, e.g. ["ar", "en"]
+  yearsExperience     Int      @map("years_experience")
+  rating              Float // 0–5
+  consultationFeeUsd  Int      @map("consultation_fee_usd")
+  offersSecondOpinion Boolean  @map("offers_second_opinion")
+  offersTeleconsult   Boolean  @map("offers_teleconsult")
+
+  specialty         Specialty          @relation(fields: [specialtyId], references: [id])
+  hospital          Hospital           @relation(fields: [hospitalId], references: [id])
+  availabilitySlots AvailabilitySlot[]
+
+  @@index([specialtyId])
+  @@index([hospitalId])
+  @@map("doctors")
+}
+
+enum ConsultationMode {
+  IN_PERSON
+  TELECONSULT
+}
+
+model AvailabilitySlot {
+  id          String           @id // slot_<doctor>_<n>
+  doctorId    String           @map("doctor_id")
+  startsAt    DateTime         @map("starts_at") @db.Timestamptz(3)
+  durationMin Int              @map("duration_min")
+  mode        ConsultationMode
+  isBooked    Boolean          @default(false) @map("is_booked")
+
+  doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@index([doctorId, startsAt])
+  @@map("availability_slots")
+}
+
+// ─────────────────────────────── Conversations & audit trail ───────────────────────────────
+
+model Conversation {
+  id        String   @id @default(uuid()) @db.Uuid
+  locale    String   @db.VarChar(5) // "en" | "ar"
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  messages Message[]
+
+  @@map("conversations")
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+}
+
+model Message {
+  id             String      @id @default(uuid()) @db.Uuid
+  conversationId String      @map("conversation_id") @db.Uuid
+  role           MessageRole
+  /// USER: { text }. ASSISTANT: the validated, structured agent response (shared ChatResponse contract).
+  content        Json
+  /// Correlates a message with API logs for a single HTTP request.
+  requestId      String?     @map("request_id")
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  conversation Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  toolCalls    ToolCallLog[]
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+enum ToolCallStatus {
+  OK
+  ERROR
+}
+
+/// Audit log of every tool the agent invoked while producing an assistant message.
+model ToolCallLog {
+  id            String         @id @default(uuid()) @db.Uuid
+  messageId     String         @map("message_id") @db.Uuid
+  tool          String
+  input         Json
+  /// Compact summary (e.g. returned IDs / counts) — never full patient text.
+  outputSummary Json           @map("output_summary")
+  status        ToolCallStatus
+  latencyMs     Int            @map("latency_ms")
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@map("tool_call_logs")
+}

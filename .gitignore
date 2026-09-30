@@ -8,6 +8,9 @@ out/
 *.tsbuildinfo
 next-env.d.ts
 
+# generated Prisma client (re-created by `prisma generate` on install/build)
+apps/api/src/generated/
+
 # env — never commit secrets; .env.example files are committed
 .env
 .env.*
